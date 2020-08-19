@@ -6,5 +6,5 @@ def get_cli_args():
     parser.add_argument("-protocol", default='tcp', dest="protocol", help="Enter protocol to use (tcp)",
                         choices=["tcp"])
     parser.add_argument("-port", default='443', dest="port", help="Enter port number",
-                        choices=[443])
+                        choices=['443', '445', '80'])
     return parser.parse_args()
