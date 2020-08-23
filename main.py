@@ -10,11 +10,52 @@ class Sniffer:
         self.protocol = protocol
         self.port = port
 
+    def initIPDict(self, ip_src, ip_dst):
+        if ip_src not in self.ips:
+            self.ips[ip_src] = {}
+        if ip_dst not in self.ips:
+            self.ips[ip_dst] = {}
+
+    def initPortDict(self, ip_src, ip_dst, sport, dport):
+        if "sports" not in self.ips[ip_src]:
+            self.ips[ip_src]["sports"] = {}
+        if "sports" not in self.ips[ip_dst]:
+            self.ips[ip_dst]["sports"] = {}
+
+        if "dports" not in self.ips[ip_dst]:
+            self.ips[ip_dst]["dports"] = {}
+        if "dports" not in self.ips[ip_src]:
+            self.ips[ip_src]["dports"] = {}
+
+        if sport not in self.ips[ip_src]["sports"]:
+            self.ips[ip_src]["sports"][sport] = 0
+        if dport not in self.ips[ip_dst]["sports"]:
+            self.ips[ip_dst]["sports"][dport] = 0
+
+        if sport not in self.ips[ip_dst]["dports"]:
+            self.ips[ip_dst]["dports"][sport] = 0
+        if dport not in self.ips[ip_src]["dports"]:
+            self.ips[ip_src]["dports"][dport] = 0
+
     def getPktCount(self, ip):
         cnt = 0
         for sport in self.ips[ip]["sports"]:
             cnt += self.ips[ip]["sports"][sport]
         return cnt
+
+    def get_l_4(self, pkt):
+        if self.protocol == "UDP":
+            return UDP
+        if self.protocol == "TCP":
+            return TCP
+
+        l_four_prot = ''
+        if UDP in pkt:
+            l_four_prot = UDP
+        if TCP in pkt:
+            l_four_prot = TCP
+
+        return l_four_prot
 
     def printIP(self, ip):
         try:
@@ -51,45 +92,24 @@ class Sniffer:
             return
 
         if self.protocol in pkt:
-            tcp_sport = pkt[TCP].sport
-            tcp_dport = pkt[TCP].dport
+            l_four_prot = self.get_l_4(pkt)
+            sport = pkt[l_four_prot].sport
+            dport = pkt[l_four_prot].dport
 
-            if tcp_sport == self.port or tcp_dport == self.port:
-                if ip_src not in self.ips:
-                    self.ips[ip_src] = {}
-                if ip_dst not in self.ips:
-                    self.ips[ip_dst] = {}
+            if sport == self.port or dport == self.port:
+                self.initIPDict(ip_src, ip_dst)
+                self.initPortDict(ip_src, ip_dst, sport, dport)
 
-                if "sports" not in self.ips[ip_src]:
-                    self.ips[ip_src]["sports"] = {}
-                if "sports" not in self.ips[ip_dst]:
-                    self.ips[ip_dst]["sports"] = {}
+                self.ips[ip_src]["sports"][sport] += 1
+                self.ips[ip_src]["dports"][dport] += 1
 
-                if "dports" not in self.ips[ip_dst]:
-                    self.ips[ip_dst]["dports"] = {}
-                if "dports" not in self.ips[ip_src]:
-                    self.ips[ip_src]["dports"] = {}
-
-                if tcp_sport not in self.ips[ip_src]["sports"]:
-                    self.ips[ip_src]["sports"][tcp_sport] = 0
-                if tcp_dport not in self.ips[ip_dst]["sports"]:
-                    self.ips[ip_dst]["sports"][tcp_dport] = 0
-
-                if tcp_sport not in self.ips[ip_dst]["dports"]:
-                    self.ips[ip_dst]["dports"][tcp_sport] = 0
-                if tcp_dport not in self.ips[ip_src]["dports"]:
-                    self.ips[ip_src]["dports"][tcp_dport] = 0
-
-                self.ips[ip_src]["sports"][tcp_sport] += 1
-                self.ips[ip_src]["dports"][tcp_dport] += 1
-
-                self.ips[ip_dst]["sports"][tcp_dport] += 1
-                self.ips[ip_dst]["dports"][tcp_sport] += 1
+                self.ips[ip_dst]["sports"][dport] += 1
+                self.ips[ip_dst]["dports"][sport] += 1
 
             self.print_ips()
 
     def sniff(self):
-        sniff(filter="ip", prn=self.print_summary)
+        sniff(filter=self.protocol, prn=self.print_summary)
 
 
 def main():
@@ -101,6 +121,3 @@ def main():
 
 
 main()
-
-# or it possible to filter with filter parameter...!
-# sniff(filter="ip and host 192.168.0.1",prn=print_summary)
